@@ -9,7 +9,7 @@
     "lint": "echo 'no lint configured'"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "dependencies": {
     "axios": "^1.7.2",
