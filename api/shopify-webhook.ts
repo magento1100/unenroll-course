@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { env, assertEnv } from "../config";
 import { verifyShopifyWebhook, ShopifyOrderCancelled } from "../lib/shopify";
-import { findUserByEmail, listUserEnrollments, unenrollEnrollment } from "../lib/learnworlds";
+import { findUserByEmail, listUserEnrollments, unenrollEnrollment, findProductIdsByNames } from "../lib/learnworlds";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -37,12 +37,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ ok: true, message: "No customer email on order" });
   }
 
+  // Resolve target LearnWorlds product IDs by Shopify line item titles (bundle names)
   const skuToCourse = env.SKU_TO_COURSE_ID;
   const targetCourseIds = new Set<string>();
+
+  // If a SKU → course ID mapping is provided, use it first
   for (const item of order.line_items || []) {
     const sku = item.sku || "";
-    const courseId = skuToCourse[sku];
-    if (courseId) targetCourseIds.add(courseId);
+    const mapped = sku && skuToCourse[sku];
+    if (mapped) targetCourseIds.add(mapped);
+  }
+
+  // Otherwise, fall back to resolving by product title/name (case-insensitive)
+  if (!targetCourseIds.size) {
+    const titles = new Set<string>();
+    for (const item of order.line_items || []) {
+      const title = (item.title || "").trim();
+      if (title) titles.add(title);
+    }
+    if (titles.size) {
+      const idsByName = await findProductIdsByNames(titles);
+      idsByName.forEach((id) => targetCourseIds.add(id));
+    }
   }
 
   if (!targetCourseIds.size) {

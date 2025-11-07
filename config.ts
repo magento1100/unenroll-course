@@ -27,7 +27,6 @@ export function assertEnv() {
   if (!env.SHOPIFY_WEBHOOK_SECRET) missing.push("SHOPIFY_WEBHOOK_SECRET");
   if (!env.LEARNWORLDS_API_BASE) missing.push("LEARNWORLDS_API_BASE");
   if (!env.LEARNWORLDS_API_TOKEN) missing.push("LEARNWORLDS_API_TOKEN");
-  if (Object.keys(env.SKU_TO_COURSE_ID).length === 0) missing.push("SKU_TO_COURSE_ID (JSON)");
   if (missing.length) {
     throw new Error(`Missing required env vars: ${missing.join(", ")}`);
   }

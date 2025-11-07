@@ -3,6 +3,7 @@ import { env } from "../config";
 
 type LWUser = { id: string; email: string };
 type LWEnrollment = { id: string; user_id: string; product_id: string };
+type LWProduct = { id: string; title?: string; name?: string; type?: string };
 
 const client = axios.create({
   baseURL: env.LEARNWORLDS_API_BASE.replace(/\/$/, ""),
@@ -31,4 +32,18 @@ export async function listUserEnrollments(userId: string): Promise<LWEnrollment[
 export async function unenrollEnrollment(enrollmentId: string): Promise<void> {
   // NOTE: Adjust the endpoint if your LW API differs
   await client.delete(`/enrollments/${enrollmentId}`);
+}
+
+export async function findProductIdsByNames(names: Set<string>): Promise<Set<string>> {
+  // Fetch products (including bundles) and match by title/name
+  const res = await client.get("/products", { params: { per_page: 100 } });
+  const products: LWProduct[] = res.data?.data || res.data?.products || [];
+
+  const lowered = new Set(Array.from(names).map((n) => n.trim().toLowerCase()));
+  const ids = new Set<string>();
+  for (const p of products) {
+    const pname = (p.title || p.name || "").trim().toLowerCase();
+    if (lowered.has(pname)) ids.add(p.id);
+  }
+  return ids;
 }
